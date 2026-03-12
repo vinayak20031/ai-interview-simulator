@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Interview Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>AI Interview Simulator</h1>
+
+    <!-- 1. Upload Resume -->
+    <div class="section" id="upload-section">
+      <h2>1. Upload Resume</h2>
+      <label>Name:</label>
+      <input type="text" id="name" placeholder="Your Name"><br>
+      <label>Age:</label>
+      <input type="number" id="age" placeholder="Your Age"><br>
+      <label>Resume (PDF):</label>
+      <input type="file" id="resumeFile" accept=".pdf"><br><br>
+      <button onclick="uploadResume()">Upload Resume</button>
+    </div>
+
+    <!-- 2. Questions -->
+    <div class="section" id="questions-section"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
