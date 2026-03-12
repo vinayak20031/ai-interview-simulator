@@ -22,9 +22,7 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-app.get("*", (req, res) => {
-    res.sendFile(path.join(frontendPath, "index.html"));
-});
+
 
 /* ---------------- UPLOAD FOLDER ---------------- */
 
