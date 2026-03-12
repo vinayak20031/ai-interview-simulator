@@ -95,7 +95,7 @@ ${resumeText.substring(0,1500)}
         const response = await axios.post(
             "https://openrouter.ai/api/v1/chat/completions",
             {
-                model: "google/gemini-2.0-flash-exp",
+                model: "mistralai/mistral-7b-instruct",
                 messages: [
                     { role: "user", content: prompt }
                 ]
