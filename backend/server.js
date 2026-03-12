@@ -1,5 +1,5 @@
 require("dotenv").config();
-const axios = require("axios");
+
 const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
@@ -7,6 +7,7 @@ const fs = require("fs");
 const pdf = require("pdf-parse");
 const cors = require("cors");
 const path = require("path");
+const axios = require("axios");
 
 const app = express();
 
@@ -16,13 +17,12 @@ app.use(cors());
 /* ---------------- FRONTEND ---------------- */
 
 const frontendPath = path.join(__dirname, "../frontend");
+
 app.use(express.static(frontendPath));
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
 });
-
-
 
 /* ---------------- UPLOAD FOLDER ---------------- */
 
@@ -35,12 +35,16 @@ if (!fs.existsSync(uploadsDir)) {
 /* ---------------- DATABASE ---------------- */
 
 mongoose.connect(process.env.MONGO_URL)
-.then(() => console.log("Database connected"))
-.catch(err => console.log("DB Connection Error:", err));
+.then(() => {
+    console.log("Database connected");
+})
+.catch(err => {
+    console.log("DB Connection Error:", err);
+});
 
 /* ---------------- SCHEMAS ---------------- */
 
-const ResumeSchema = mongoose.Schema({
+const ResumeSchema = new mongoose.Schema({
     name: String,
     age: Number,
     resumePath: String
@@ -48,14 +52,14 @@ const ResumeSchema = mongoose.Schema({
 
 const Resume = mongoose.model("Resume", ResumeSchema);
 
-const QuestionSchema = mongoose.Schema({
+const QuestionSchema = new mongoose.Schema({
     resumeId: { type: mongoose.Schema.Types.ObjectId, ref: "Resume" },
     question: String
 });
 
 const Question = mongoose.model("Question", QuestionSchema);
 
-const AnswerSchema = mongoose.Schema({
+const AnswerSchema = new mongoose.Schema({
     questionId: { type: mongoose.Schema.Types.ObjectId, ref: "Question" },
     answer: String,
     score: Number,
@@ -83,8 +87,6 @@ async function generateInterviewQuestions(resumeText) {
 
     try {
 
-        console.log("API KEY:", process.env.OPENROUTER_API_KEY);
-
         const prompt = `
 You are a technical interviewer.
 
@@ -105,15 +107,16 @@ ${resumeText.substring(0,1500)}
             {
                 headers: {
                     "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://ai-interview-simulator-kle4.onrender.com"
+                    "Content-Type": "application/json"
                 }
             }
         );
 
-        console.log("AI RESPONSE:", response.data);
+        const aiText = response.data.choices[0].message.content;
 
-        return response.data.choices[0].message.content;
+        console.log("AI RESPONSE:", aiText);
+
+        return aiText;
 
     } catch (error) {
 
@@ -140,9 +143,7 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
 
         const resumeText = data.text.substring(0,1500);
 
-        const questions = await generateInterviewQuestions(resumeText);
-
-        console.log("AI RAW RESPONSE:", questions);
+        const questionsText = await generateInterviewQuestions(resumeText);
 
         const newResume = new Resume({
             name: req.body.name,
@@ -152,9 +153,10 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
 
         await newResume.save();
 
-        const questionsArray = questions
+        const questionsArray = questionsText
             .split("\n")
-            .filter(q => q.trim() !== "");
+            .map(q => q.trim())
+            .filter(q => q.length > 5);
 
         const questionIds = [];
 
@@ -178,7 +180,7 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
 
     } catch (error) {
 
-        console.log("ERROR:", error);
+        console.log("UPLOAD ERROR:", error);
 
         res.status(500).json({
             message: "Server error",
@@ -196,7 +198,6 @@ app.post("/submit-answer", async (req, res) => {
         const { questionId, answer } = req.body;
 
         if (!questionId || !answer) {
-
             return res.status(400).json({
                 message: "Question ID and answer required"
             });
@@ -216,7 +217,7 @@ app.post("/submit-answer", async (req, res) => {
 
     } catch (error) {
 
-        console.log(error);
+        console.log("ANSWER ERROR:", error);
 
         res.status(500).json({
             message: "Server error"
@@ -237,7 +238,6 @@ app.post("/evaluate-answer", async (req, res) => {
             .populate("questionId");
 
         if (!answerData) {
-
             return res.status(404).json({
                 message: "Answer not found"
             });
@@ -250,11 +250,11 @@ Question: ${answerData.questionId.question}
 
 Answer: ${answerData.answer}
 
-Respond ONLY in JSON format like this:
+Respond ONLY in JSON format:
 
 {
- "score": number between 1 and 10,
- "feedback": "brief feedback"
+ "score": 1-10,
+ "feedback": "short feedback"
 }
 `;
 
@@ -269,27 +269,22 @@ Respond ONLY in JSON format like this:
             {
                 headers: {
                     "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://ai-interview-simulator-kle4.onrender.com"
+                    "Content-Type": "application/json"
                 }
             }
         );
 
-        let evalText = response.data.choices[0].message.content;
+        const evalText = response.data.choices[0].message.content;
 
         let score = 0;
         let feedback = "No feedback";
 
         try {
-
             const parsed = JSON.parse(evalText);
-
             score = parsed.score;
             feedback = parsed.feedback;
-
         } catch {
-
-            console.log("AI JSON parsing failed");
+            console.log("AI JSON parse failed");
         }
 
         answerData.score = score;
@@ -305,7 +300,7 @@ Respond ONLY in JSON format like this:
 
     } catch (error) {
 
-        console.log(error);
+        console.log("EVALUATION ERROR:", error);
 
         res.status(500).json({
             message: "Server error"
