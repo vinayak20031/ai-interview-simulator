@@ -122,6 +122,7 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
         const resumeText = data.text.substring(0,1500);
 
         const questions = await generateInterviewQuestions(resumeText);
+        console.log("AI RAW RESPONSE:", questions);
 
         const newResume = new Resume({
             name: req.body.name,
