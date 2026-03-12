@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-
+/* ---------------- FRONTEND ---------------- */
 
 const frontendPath = path.join(__dirname, "../frontend");
 app.use(express.static(frontendPath));
@@ -22,7 +22,7 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-
+/* ---------------- UPLOAD FOLDER ---------------- */
 
 const uploadsDir = path.join(__dirname, "uploads");
 
@@ -30,13 +30,13 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 
-
+/* ---------------- DATABASE ---------------- */
 
 mongoose.connect(process.env.MONGO_URL)
 .then(() => console.log("Database connected"))
 .catch(err => console.log("DB Connection Error:", err));
 
-
+/* ---------------- SCHEMAS ---------------- */
 
 const ResumeSchema = mongoose.Schema({
     name: String,
@@ -62,7 +62,7 @@ const AnswerSchema = mongoose.Schema({
 
 const Answer = mongoose.model("Answer", AnswerSchema);
 
-
+/* ---------------- MULTER ---------------- */
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -75,36 +75,53 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-
+/* ---------------- AI QUESTION GENERATION ---------------- */
 
 async function generateInterviewQuestions(resumeText) {
 
-    const prompt = `
+    try {
+
+        console.log("API KEY:", process.env.OPENROUTER_API_KEY);
+
+        const prompt = `
 You are a technical interviewer.
+
 Based on this resume generate 5 technical interview questions.
 
 Resume:
 ${resumeText.substring(0,1500)}
 `;
 
-    const response = await axios.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-            model: "openai/gpt-3.5-turbo",
-            messages: [{ role: "user", content: prompt }]
-        },
-        {
-            headers: {
-                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json"
+        const response = await axios.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+                model: "google/gemini-2.0-flash-exp",
+                messages: [
+                    { role: "user", content: prompt }
+                ]
+            },
+            {
+                headers: {
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://ai-interview-simulator-kle4.onrender.com"
+                }
             }
-        }
-    );
+        );
 
-    return response.data.choices[0].message.content;
+        console.log("AI RESPONSE:", response.data);
+
+        return response.data.choices[0].message.content;
+
+    } catch (error) {
+
+        console.log("AI ERROR:", error.response?.data || error.message);
+
+        return "AI failed to generate questions";
+    }
 }
 
-
+/* ---------------- UPLOAD RESUME ---------------- */
 
 app.post("/upload", upload.single("resume"), async (req, res) => {
 
@@ -122,6 +139,7 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
         const resumeText = data.text.substring(0,1500);
 
         const questions = await generateInterviewQuestions(resumeText);
+
         console.log("AI RAW RESPONSE:", questions);
 
         const newResume = new Resume({
@@ -167,7 +185,7 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
     }
 });
 
-
+/* ---------------- SUBMIT ANSWER ---------------- */
 
 app.post("/submit-answer", async (req, res) => {
 
@@ -204,7 +222,7 @@ app.post("/submit-answer", async (req, res) => {
     }
 });
 
-
+/* ---------------- EVALUATE ANSWER ---------------- */
 
 app.post("/evaluate-answer", async (req, res) => {
 
@@ -227,6 +245,7 @@ app.post("/evaluate-answer", async (req, res) => {
 Evaluate this interview answer.
 
 Question: ${answerData.questionId.question}
+
 Answer: ${answerData.answer}
 
 Respond ONLY in JSON format like this:
@@ -240,13 +259,16 @@ Respond ONLY in JSON format like this:
         const response = await axios.post(
             "https://openrouter.ai/api/v1/chat/completions",
             {
-                model: "openai/gpt-3.5-turbo",
-                messages: [{ role: "user", content: prompt }]
+                model: "google/gemini-2.0-flash-exp",
+                messages: [
+                    { role: "user", content: prompt }
+                ]
             },
             {
                 headers: {
-                    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                    "Content-Type": "application/json"
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://ai-interview-simulator-kle4.onrender.com"
                 }
             }
         );
@@ -289,7 +311,7 @@ Respond ONLY in JSON format like this:
     }
 });
 
-
+/* ---------------- SERVER ---------------- */
 
 const PORT = process.env.PORT || 3000;
 
