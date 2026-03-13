@@ -89,7 +89,9 @@ async function generateInterviewQuestions(resumeText) {
         const prompt = `
 You are a technical interviewer.
 
-Based on this resume generate 5 technical interview questions.
+Based on this resume generate exactly 5 technical interview questions.
+
+Return ONLY the questions separated by new lines.
 
 Resume:
 ${resumeText.substring(0,1500)}
@@ -98,7 +100,7 @@ ${resumeText.substring(0,1500)}
         const response = await axios.post(
             "https://openrouter.ai/api/v1/chat/completions",
             {
-                model: "mistralai/mistral-7b-instruct",
+                model: "meta-llama/llama-3-8b-instruct",
                 messages: [
                     { role: "user", content: prompt }
                 ]
@@ -107,7 +109,8 @@ ${resumeText.substring(0,1500)}
                 headers: {
                     "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
                     "Content-Type": "application/json"
-                }
+                },
+                timeout: 20000
             }
         );
 
@@ -121,7 +124,14 @@ ${resumeText.substring(0,1500)}
 
         console.log("AI ERROR:", error.response?.data || error.message);
 
-        return "AI failed to generate questions";
+        // fallback questions if AI fails
+        return `
+Explain your experience with programming languages.
+What data structures have you used in your projects?
+Describe one technical project you built.
+What challenges did you face during development?
+How do you debug a program when it fails?
+`;
     }
 }
 
@@ -154,8 +164,12 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
 
         const questionsArray = questionsText
             .split("\n")
-            .map(q => q.trim())
-            .filter(q => q.length > 5);
+            .map(q => q.replace(/^[0-9.\-\s]+/, "").trim())
+            .filter(q => q.length > 10)
+            .slice(0,5);
+
+
+
 
         const questionIds = [];
 
