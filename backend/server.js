@@ -165,9 +165,8 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
         const questionsArray = questionsText
             .split("\n")
             .map(q => q.replace(/^[0-9.\-\s]+/, "").trim())
-            .filter(q => q.length > 10)
+            .filter(q => q.length > 10 && q.includes("?"))
             .slice(0,5);
-
 
 
 
