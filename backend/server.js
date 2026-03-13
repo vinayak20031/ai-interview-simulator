@@ -255,19 +255,19 @@ app.post("/evaluate-answer", async (req, res) => {
             });
         }
 
-        const prompt = `
-Evaluate this interview answer.
+    const prompt = `
+You are an interview evaluator.
+
+Evaluate the answer from 1 to 10.
+
+Return ONLY valid JSON. No explanation.
+
+Example:
+{"score":7,"feedback":"Good answer but missing technical depth"}
 
 Question: ${answerData.questionId.question}
 
 Answer: ${answerData.answer}
-
-Respond ONLY in JSON format:
-
-{
- "score": 1-10,
- "feedback": "short feedback"
-}
 `;
 
         const response = await axios.post(
@@ -288,29 +288,32 @@ Respond ONLY in JSON format:
 
         const evalText = response.data.choices[0].message.content;
 
+
         let score = 0;
-        let feedback = "AI could not evaluate the answer.";
+        let feedback = "AI evaluation unavailable";
 
         try {
 
             const cleaned = evalText
-                .replace(/```json/g, "")
-                .replace(/```/g, "")
+                .replace(/```json/g,"")
+                .replace(/```/g,"")
                 .trim();
 
             const parsed = JSON.parse(cleaned);
 
-            score = parsed.score ?? 0;
-            feedback = parsed.feedback ?? "No feedback provided";
+            score = parsed.score || 0;
+            feedback = parsed.feedback || "No feedback";
 
         } catch (err) {
 
-            console.log("AI JSON parse failed:", evalText);
+            console.log("AI RESPONSE:", evalText);
 
-            score = Math.floor(Math.random() * 4) + 6; // random score 6–9
-            feedback = "Answer submitted successfully. AI evaluation formatting failed but response saved.";
+            score = 7;
+            feedback = "Answer saved but AI formatting failed.";
 
-        }   
+}
+
+
 
 
 
