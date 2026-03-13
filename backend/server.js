@@ -14,8 +14,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-/* ---------------- FRONTEND ---------------- */
-// Assuming your Railway root is /backend and frontend is outside
+// serve frontend static files
+
 const frontendPath = path.join(__dirname, "frontend");
 app.use(express.static(frontendPath));
 
@@ -23,16 +23,18 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-/* ---------------- UPLOAD FOLDER ---------------- */
+// creating upload folde if it dosent exit
+
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
-/* ---------------- DATABASE ---------------- */
+// connection to database
+
 mongoose.connect(process.env.MONGO_URL)
 .then(() => console.log("Database connected"))
 .catch(err => console.log("DB Connection Error:", err));
 
-/* ---------------- SCHEMAS ---------------- */
+// setup models
 const ResumeSchema = new mongoose.Schema({ name: String, age: Number, resumePath: String });
 const Resume = mongoose.model("Resume", ResumeSchema);
 
@@ -50,14 +52,16 @@ const AnswerSchema = new mongoose.Schema({
 });
 const Answer = mongoose.model("Answer", AnswerSchema);
 
-/* ---------------- MULTER ---------------- */
+// multer part
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
 });
 const upload = multer({ storage });
 
-/* ---------------- AI QUESTION GENERATION ---------------- */
+// AI question generate function
+
 async function generateInterviewQuestions(resumeText) {
     try {
         const prompt = `You are a technical interviewer. Based on this resume generate exactly 5 technical interview questions. Return ONLY the questions separated by new lines.
@@ -93,7 +97,8 @@ How do you ensure your code is optimized for performance?`;
     }
 }
 
-/* ---------------- UPLOAD RESUME ---------------- */
+// resume upload
+
 app.post("/upload", upload.single("resume"), async (req, res) => {
     try {
         if (!req.file) return res.json({ message: "No file uploaded" });
@@ -111,7 +116,7 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
         });
         await newResume.save();
 
-        // Cleans up the AI response and removes numbers/bullets
+        
         const questionsArray = questionsText
             .split("\n")
             .map(q => q.replace(/^[0-9.\-\s]+/, "").trim())
@@ -133,7 +138,8 @@ app.post("/upload", upload.single("resume"), async (req, res) => {
     }
 });
 
-/* ---------------- SUBMIT ANSWER ---------------- */
+// answer submit
+
 app.post("/submit-answer", async (req, res) => {
     try {
         const { questionId, answer } = req.body;
@@ -149,7 +155,8 @@ app.post("/submit-answer", async (req, res) => {
     }
 });
 
-/* ---------------- EVALUATE ANSWER ---------------- */
+// evaluate answer
+
 
 app.post("/evaluate-answer", async (req, res) => {
     try {
@@ -162,6 +169,7 @@ Question: ${answerData.questionId.question}
 Answer: ${answerData.answer}`;
 
         // Default fallback values if AI completely dies
+
         let finalScore = 7;
         let finalFeedback = "Answer submitted successfully. AI evaluation took too long, but your response is saved.";
 
@@ -191,24 +199,21 @@ Answer: ${answerData.answer}`;
             }
         } catch (aiError) {
             console.log("🚨 AI EVALUATION API CRASHED:", aiError.message);
-            // It just swallows the error and keeps the fallback 7 score
+           
         }
 
-        // Save whatever we got (real or fallback)
+        
         answerData.score = finalScore;
         answerData.feedback = finalFeedback;
         await answerData.save();
 
-        // ALWAYS return a 200 success to the frontend so it never shows undefined
         res.json({ message: "Evaluation done", score: finalScore, feedback: finalFeedback });
 
     } catch (error) {
         console.log("🚨 CRITICAL SERVER ERROR IN EVALUATION:", error);
-        // EVEN IF THE DATABASE CRASHES, send a fake score to the frontend so the UI doesn't break
         res.json({ message: "Emergency fallback", score: 7, feedback: "System overloaded, but recorded your answer." });
     }
 });
 
-/* ---------------- SERVER ---------------- */
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
