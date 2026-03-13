@@ -150,7 +150,7 @@ app.post("/submit-answer", async (req, res) => {
 });
 
 /* ---------------- EVALUATE ANSWER ---------------- */
-/* ---------------- EVALUATE ANSWER ---------------- */
+
 app.post("/evaluate-answer", async (req, res) => {
     try {
         const { answerId } = req.body;
@@ -169,7 +169,7 @@ Answer: ${answerData.answer}`;
             const response = await axios.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 {
-                    model: "google/gemini-2.0-flash-exp",
+                    model: "meta-llama/llama-3-8b-instruct",
                     messages: [{ role: "user", content: prompt }]
                 },
                 {
@@ -178,7 +178,7 @@ Answer: ${answerData.answer}`;
                         "Content-Type": "application/json",
                         "HTTP-Referer": "https://ai-interview-simulator.up.railway.app"
                     },
-                    timeout: 8000 // Shorter timeout so you don't wait forever
+                    timeout: 2000 // Shorter timeout so you don't wait forever
                 }
             );
 
