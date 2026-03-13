@@ -16,7 +16,7 @@ app.use(cors());
 
 /* ---------------- FRONTEND ---------------- */
 // Assuming your Railway root is /backend and frontend is outside
-const frontendPath = path.join(__dirname, "../frontend");
+const frontendPath = path.join(__dirname, "frontend");
 app.use(express.static(frontendPath));
 
 app.get("/", (req, res) => {
