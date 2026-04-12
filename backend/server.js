@@ -26,7 +26,10 @@ app.get("/", (req, res) => {
 // creating upload folde if it dosent exit
 
 const uploadsDir = path.join("/tmp", "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // connection to database
 
