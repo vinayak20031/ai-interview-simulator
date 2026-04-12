@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
 
 // creating upload folde if it dosent exit
 
-const uploadsDir = path.join(__dirname, "uploads");
+const uploadsDir = path.join("/tmp", "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
 // connection to database
@@ -78,10 +78,10 @@ ${resumeText.substring(0,1500)}`;
                 headers: {
                     "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
                     "Content-Type": "application/json",
-                    "HTTP-Referer": "https://ai-interview-simulator.up.railway.app",
+                    "HTTP-Referer": "https://render.com",
                     "X-Title": "Interview Simulator"
                 },
-                timeout: 15000 // Failsafe: stops waiting after 15 seconds
+                timeout: 30000 // Failsafe: stops waiting after 15 seconds
             }
         );
 
